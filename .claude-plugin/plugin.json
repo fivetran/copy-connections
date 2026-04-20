@@ -1,0 +1,9 @@
+{
+  "name": "copy-connections",
+  "description": "Copy existing Fivetran connections to a new destination, with full config fidelity, transformation handling, and safe credential collection.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Fivetran"
+  },
+  "license": "MIT"
+}

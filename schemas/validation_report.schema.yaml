@@ -1,0 +1,54 @@
+# Schema for .copy-connections/validation_report.yaml
+#
+# Written by copy-connections-validate. Consumed by copy-connections-execute.
+# Execute will refuse to run if status is "fail".
+
+schema_version: 1
+
+metadata:
+  validated_at: <ISO 8601 timestamp>
+  plan_path: .copy-connections/copy_plan.yaml
+  plan_checksum: <hash of plan contents so we can detect if plan was modified after validation>
+
+# Top-level status
+status: pass | pass-with-warnings | fail
+
+# Summary counts
+summary:
+  blocking: <int>
+  warnings: <int>
+  info: <int>
+
+# Destination-level findings
+destination_findings:
+  - severity: blocking | warning | info
+    code: <short code like NAMING_COLLISION, NONPORTABLE_FIELD, etc.>
+    message: <human-readable>
+    field: <optional — which field this is about>
+
+# Per-connection findings
+connection_findings:
+  - source_id: <Fivetran connection id>
+    target_name: <string>
+    findings:
+      - severity: blocking | warning | info
+        code: <e.g., SOURCE_IN_ERROR, UNPATCHABLE_TABLE, CUSTOM_TRANSFORMATION_NOT_COPYABLE>
+        message: <human-readable>
+        context:
+          # optional, depends on code
+          table_name: <string>
+          column_name: <string>
+          reason_code: SYSTEM_TABLE | DELETED | OTHER | SYSTEM_COLUMN
+
+# Transformation-level findings
+transformation_findings:
+  - package_name: <string>
+    findings:
+      - severity: blocking | warning | info
+        code: <e.g., PACKAGE_INCOMPATIBLE_WITH_DESTINATION, MISSING_DEPENDENCY_CONNECTION>
+        message: <human-readable>
+
+# Warnings that require explicit user acknowledgment before execute proceeds
+acknowledgments_required:
+  - code: <matches a code from above>
+    message: <human-readable>

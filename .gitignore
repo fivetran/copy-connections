@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Plugin runtime state (created by end users running the plugin; not part of the plugin source)
+.copy-connections/
+
+# Credentials (defense in depth — credentials.yaml normally lives in .copy-connections/
+# which is already ignored, but block it at any path just in case)
+credentials.yaml
+credentials.yaml.template

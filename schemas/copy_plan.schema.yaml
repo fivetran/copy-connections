@@ -1,0 +1,79 @@
+# Schema for .copy-connections/copy_plan.yaml
+#
+# Written by copy-connections-scope. Consumed by copy-connections-validate and copy-connections-execute.
+# This is a documentation schema (human-readable), not a strict JSON Schema. Fields are authoritative.
+
+schema_version: 1
+
+# Metadata about the plan
+metadata:
+  created_at: <ISO 8601 timestamp>
+  created_by: <user identifier if available, else "unknown">
+  fivetran_account_hint: <group id or destination id pulled from API, for sanity checking at execute time>
+
+# What to do about the destination
+destination:
+  mode: new | existing
+  # If mode == existing:
+  existing_destination_id: <id>
+  # If mode == new:
+  new_group_name: <string>
+  new_destination_config:
+    service: <e.g., snowflake, bigquery, redshift>
+    # Portability choice:
+    portability_source:
+      mode: copy_from_existing | fivetran_defaults | from_scratch
+      # If mode == copy_from_existing:
+      source_destination_id: <id>
+      # Fields that were copied (user sees these):
+      copied_fields:
+        - time_zone
+        - processing_location
+        - naming_convention
+    # Destination-type-specific config (the user filled this in, possibly over defaults):
+    config:
+      # Arbitrary key-value per service type
+      <field_name>: <value>
+
+# Which connections to copy
+connections:
+  - source_id: <Fivetran connection id>
+    source_service: <e.g., postgres, salesforce>
+    target_name: <string — defaults to same as source schema>
+    # The full config block minus credentials
+    config:
+      <verbatim non-credential fields from source get_connection_details>
+    # Override pause_after_trial regardless of source
+    pause_after_trial: false
+    # Schema config: captured from get_connection_schema_config, reproduced as intent
+    schema_config:
+      schema_change_handling: ALLOW_ALL | ALLOW_COLUMNS | BLOCK_ALL
+      tables:
+        - name_in_source: <string>
+          name_in_destination: <string>
+          enabled: <bool>
+          sync_mode: SOFT_DELETE | HISTORY | LIVE
+          columns:
+            - name_in_source: <string>
+              name_in_destination: <string>
+              enabled: <bool>
+              hashed: <bool>
+    # Which fields need credentials (detected as masked in source). Informational only — for the results file and the optional post-execute credentials flow.
+    credential_fields:
+      - password
+      - api_key
+      # etc.
+    # Auth style — determines how credentials (if any) will be handled post-execute
+    auth_style: oauth | credentials | none
+
+# Transformations to replicate
+transformations:
+  quickstart_packages:
+    - source_transformation_id: <id>
+      package_name: <string>
+      target_connection_source_ids:
+        - <connection source_id that this package depends on>
+  custom_dbt_projects_detected:
+    # Out of scope for v0 — listed for user awareness only
+    - project_id: <id>
+      note: "Custom dbt projects are out of scope. Set up separately on the new destination."
