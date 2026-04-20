@@ -87,9 +87,6 @@ Re-fetch `get_connection_details` for the source connection. If the set of maske
 **Custom transformations at connection level** (`info`, code `CUSTOM_TRANSFORMATION_NOT_COPYABLE`).
 If the source connection has a transformation configured via the Transformations product (not a Quickstart package, not column config), that won't carry through this plugin. List the transformation name and flag for manual recreation. This is `info` not `warning` because we've told the user during scoping; this is just a reminder.
 
-**Pause-after-trial override** (`info`, code `PAUSE_AFTER_TRIAL_OVERRIDDEN`).
-Confirm the plan has `pause_after_trial: false`. If the source had it set to `true`, note this is intentional. If it wasn't overridden, that's a bug in the plan — `blocking`, code `PAUSE_AFTER_TRIAL_NOT_OVERRIDDEN` — re-scope.
-
 ### 5. Run per-transformation checks
 
 For each Quickstart package in the plan:

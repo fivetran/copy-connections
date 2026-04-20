@@ -18,9 +18,7 @@ This skill performs the actual copy. It takes a validated plan and produces `.co
 3. **Confirm user is ready to execute.** Final yes/no before any writes.
 4. **Always use `run_setup_tests: false` on `create_connection`.** We don't have credentials at this point; running tests would fail noisily.
 5. **Continue on per-connection failures.** Don't abort the whole run if one connection fails. Log the failure and move to the next.
-6. **Produce `results.md` at the end regardless of outcome.** Partial successes, full successes, and full failures all produce a results file.
-
-## Step-by-step
+6. **Produce `results.md` at the end regardless of outcome.** Partial successes, full successes, and full failures all produce a results file.## Step-by-step
 
 ### 1. Pre-flight
 
@@ -49,10 +47,9 @@ Process connections sequentially. For each one:
 
 **b. Create the connection shell.** Call `create_connection` with:
 - Full `config` block from the plan (credential fields as empty strings)
-- `pause_after_trial: false` (always, regardless of source value)
 - `run_setup_tests: false` (always — we don't have credentials)
 
-The connection is created paused by default. This is the Fivetran-side default behavior; we rely on it.
+All other fields from the plan's connection config are passed through verbatim. The connection is created paused by default. This is the Fivetran-side default behavior; we rely on it.
 
 **c. Apply schema config.** For each table in the plan's schema config, call `modify_connection_table_config` with:
 - `enabled` (table-level)

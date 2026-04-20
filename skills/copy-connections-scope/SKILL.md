@@ -170,6 +170,8 @@ Connections (3 of 4 in prod_redshift, hubspot_marketing excluded):
 Transformations:
   stripe_analytics Quickstart package (tied to stripe_prod)
 
+All connection settings (sync frequency, data delay, schedule type, networking method, connector-specific config) are copied exactly as configured in the source.
+
 Note: Connections will be created without credentials and left paused. After the copy, you can either:
   — Let me help attach credentials and run setup tests, or
   — Fill in credentials yourself via the Fivetran UI.
@@ -187,7 +189,6 @@ Key fields to capture verbatim from what Fivetran returned:
 
 - Connection `config` block with masked fields replaced by empty strings (don't carry `"********"` through)
 - Schema config with every table's `enabled`, `sync_mode`, and every column's `enabled` and `hashed`
-- Every connection's `pause_after_trial` should be **overridden to `false`** in the plan, regardless of the source value (see "Key product knowledge" below)
 - Per-connection: list of masked field names (the credential inventory) and `auth_style` classification
 
 Tell the user the plan is written and mention the next step: run validate.
@@ -198,7 +199,7 @@ Tell the user the plan is written and mention the next step: run validate.
 
 **Credentials are not part of copying.** A connection exists once it's created, even without credentials. Credentials make it *sync*, not make it *exist*. This plugin creates connections; adding credentials is a separate, optional post-step. This framing matters for user communication — don't tell them "we need credentials to copy" because we don't.
 
-**`pause_after_trial: true` is a billing-era setting.** It causes the connection to auto-unpause when the account's trial ends. If the user's account is on a paid plan, this field is harmless. If the account is on trial, it's a landmine — copies could start syncing unexpectedly at an arbitrary future date. Override to `false` in the plan for safety. If the user protests, tell them why.
+**Connection configs copy verbatim.** Every field from the source's `config` block — sync frequency, data delay threshold, schedule type, networking method, connector-specific settings, everything — is replicated as-is. The only exception is credentials (masked in source, filled in later via the optional credentials flow or the Fivetran UI). Don't selectively choose what to copy; copy everything that isn't credentials. The user's source configuration is their deliberate choice; respect it.
 
 **Destination config portability is type-sensitive.** Same-type: nearly everything ports except credentials and account-specific identifiers. Cross-type: only type-agnostic fields. Be honest with the user about what's carrying over.
 

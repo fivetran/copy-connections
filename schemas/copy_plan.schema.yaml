@@ -43,8 +43,6 @@ connections:
     # The full config block minus credentials
     config:
       <verbatim non-credential fields from source get_connection_details>
-    # Override pause_after_trial regardless of source
-    pause_after_trial: false
     # Schema config: captured from get_connection_schema_config, reproduced as intent
     schema_config:
       schema_change_handling: ALLOW_ALL | ALLOW_COLUMNS | BLOCK_ALL
