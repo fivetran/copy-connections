@@ -44,10 +44,10 @@ Between phases, the plugin asks before continuing. State is persisted in `.copy-
 
 ## Installation
 
-For local testing:
+For local testing, inside the directory [fivetran-mcp](https://github.com/fivetran/fivetran-mcp) is configured in, run:
 
 ```
-claude --plugin-dir ./copy-connections
+claude --plugin-dir /path/to/copy-connections
 ```
 
 ## Usage
