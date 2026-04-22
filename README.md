@@ -6,7 +6,7 @@ This is a Claude Code plugin that packages five skills orchestrating a copy work
 
 ## Status
 
-**v0.1.0 — implementation complete, pre-testing.** Skills are written but haven't yet been exercised end-to-end against a live Fivetran account. Expect rough edges on first real run.
+**v0.1.1 — implementation complete, pre-testing.** Skills are written.  They've been tested again copying into a destination of the same type.  Have not yet been tested by copying into a destination of a different type.
 
 ## What this does
 
