@@ -138,7 +138,7 @@ Give a clear verbal summary. Lead with the overall status.
 
 **Custom transformations need to be surfaced multiple times.** Once in scope, once in validate, once in the results file post-execute. Users forget between scoping and execution. Redundancy is fine here.
 
-**Validation is not a setup test.** We do not call `run_connection_setup_tests` or `run_destination_setup_tests` during validate — those are writes-adjacent (they hit the source/target system) and should only happen during execute. Validate reads Fivetran's state; it does not poke source or target systems.
+**Validation is not a setup test.** We do not call `run_connection_setup_tests` or `run_destination_setup_tests` during validate — those are writes-adjacent (they hit the source/target system). Setup tests run in the `copy-connections-schema` skill after credentials are attached. Validate reads Fivetran's state; it does not poke source or target systems.
 
 ## When validate fails
 

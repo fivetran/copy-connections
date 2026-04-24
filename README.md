@@ -2,11 +2,11 @@
 
 Copy existing Fivetran connections to a new destination with full config fidelity.  Connections are created paused and without credentials; you decide how to handle credentials afterward (let the skills help, or finish in the Fivetran UI).
 
-Five skills that orchestrate a copy workflow against the Fivetran REST API. Packaged as a Claude Code plugin; also runs in Codex. Depends on the [Fivetran MCP server](https://github.com/fivetran/fivetran-mcp).
+Six skills that orchestrate a copy workflow against the Fivetran REST API. Packaged as a Claude Code plugin; also runs in Codex. Depends on the [Fivetran MCP server](https://github.com/fivetran/fivetran-mcp).
 
 ## Status
 
-**v0.1.1 — implementation complete, pre-testing.** Skills are written.  They've been tested again copying into a destination of the same type.  Have not yet been tested by copying into a destination of a different type.
+**v0.2.0 — implementation complete, pre-testing.** Skills are written.  They've been tested again copying into a destination of the same type.  Have not yet been tested by copying into a destination of a different type.
 
 ## What this does
 
@@ -17,7 +17,7 @@ Given an existing Fivetran account, Copy Connections helps you create a duplicat
 - Splitting a single destination into prod and dev
 - Standing up a staging or DR mirror
 
-**What copies:** connection configs, schema configs (enabled tables/columns, sync mode), column config (hashing, blocking), connection-level settings (sync frequency, data delay, networking method), and Quickstart transformation packages.
+**What copies:** connection configs (sync frequency, data delay, networking method, connector-specific settings), schema configs (enabled tables/columns, sync mode), column config (hashing, blocking), and Quickstart transformation packages.
 
 **What doesn't copy:** credentials (can be added post-copy via the credentials skill or manually in the UI), OAuth tokens (re-auth required in the UI — the skills can't do browser OAuth), custom dbt projects (detected and flagged, require separate setup), historical data (new connections start fresh from the time you unpause them).
 
@@ -25,12 +25,13 @@ Given an existing Fivetran account, Copy Connections helps you create a duplicat
 
 ## The workflow
 
-Four phases. The first three are the copy itself; the fourth is an optional convenience for attaching credentials afterward.
+Five phases. The first three create the connections; the last two get them ready to sync.
 
 1. **Scope** — you describe what you want, the scope skill fetches current state, and produces a structured copy plan. Intent-first: "testing a few connections" and "migrating everything" get different defaults.
 2. **Validate** — checks the plan for issues (naming collisions, type compatibility, schema portability, source state). Produces a report; execute refuses to run if validation fails.
-3. **Execute** — creates the connection shells, applies schema and column config, installs Quickstart packages. Uses `run_setup_tests: false` so no credentials are needed. Produces a results file.
-4. **Credentials** *(optional, post-execute)* — helps attach credentials and run setup tests on the created connections. You can skip this entirely and handle credentials yourself in the Fivetran UI.
+3. **Execute** — creates the connection shells with config and installs Quickstart packages. Uses `run_setup_tests: false` so no credentials are needed. Produces a results file.
+4. **Credentials** — helps attach credentials to the created connections. For credential-based connections (password, API key), collects and patches via the API. For OAuth connectors, provides Fivetran UI links. You can skip this entirely and handle credentials yourself in the Fivetran UI.
+5. **Schema** — after credentials are in place, runs setup tests to verify and discover the schema, then applies table/column selections, sync modes, and hashing from the plan.
 
 Between phases, the coordinator asks before continuing. State is persisted in `.copy-connections/` in your working directory, so you can close your session mid-workflow and resume later.
 
@@ -40,7 +41,7 @@ Between phases, the coordinator asks before continuing. State is persisted in `.
 * Fivetran MCP server configured in your working directory — see [setup instructions](https://github.com/fivetran/fivetran-mcp)
 - These MCP tools enabled (uncomment in `server.py` if needed):
   - **Reads:** `list_connections`, `get_connection_details`, `get_connection_schema_config`, `list_destinations`, `get_destination_details`, `list_groups`, `list_transformations`, `get_transformation_details`, `list_transformation_projects`, Quickstart package metadata endpoints
-  - **Writes:** `create_group`, `create_destination`, `run_destination_setup_tests`, `create_connection`, `modify_connection_table_config`, `run_connection_setup_tests`, `create_transformation`, and the credential-patch endpoint (for the optional post-execute credentials flow)
+  - **Writes:** `create_group`, `create_destination`, `run_destination_setup_tests`, `create_connection`, `modify_connection`, `modify_connection_table_config`, `run_connection_setup_tests`, `create_transformation`
 
 ## Installation
 
@@ -96,7 +97,7 @@ Everything the skills write lives in `.copy-connections/`:
 
 - `copy_plan.yaml` — the structured plan produced by scoping
 - `validation_report.yaml` — issues found during validation (with a checksum of the plan, so execute can detect if the plan changed after validation)
-- `results.md` — what execute did, with next steps
+- `results.md` — what execute did, updated by credentials and schema skills with next steps
 - `credentials.yaml.template` — generated by the credentials skill if you choose the file-based path
 - `credentials.yaml` — your filled-in template (do not commit)
 
@@ -107,8 +108,9 @@ The credentials skill adds `credentials.yaml` to `.gitignore` if it detects a gi
 - **`copy-connections`** — coordinator. Detects current state and routes to the right sub-skill.
 - **`copy-connections-scope`** — interactive scoping. Asks about intent, fetches Fivetran state, produces the plan. Supports both fresh scoping and modifying an existing plan.
 - **`copy-connections-validate`** — validates the plan against current Fivetran state. Produces a report with blocking issues, warnings, and info-level findings.
-- **`copy-connections-execute`** — runs the copy. Creates connection shells with `run_setup_tests: false`, applies schema and column config, installs Quickstart packages, leaves everything paused.
-- **`copy-connections-credentials`** — *optional, post-execute.* Helps attach credentials (inline prompts or a template file) and run setup tests on credential-based connections. Does nothing for OAuth connectors — those need UI completion.
+- **`copy-connections-execute`** — runs the copy. Creates connection shells with `run_setup_tests: false`, installs Quickstart packages, leaves everything paused.
+- **`copy-connections-credentials`** — post-execute. Helps attach credentials (inline prompts or a template file) for credential-based connections, provides UI links for OAuth connectors.
+- **`copy-connections-schema`** — post-credentials. Runs setup tests and applies schema config (table/column selections, sync modes, hashing) from the plan.
 
 ## What's out of scope for v0
 

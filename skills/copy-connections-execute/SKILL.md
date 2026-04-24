@@ -1,13 +1,15 @@
 ---
 name: copy-connections-execute
-description: Use this skill as part of the Copy Connections workflow to execute a validated copy plan. Creates connection shells (without credentials), applies schema and column config, installs Quickstart packages, and produces a results file with next steps. Refuses to run without a passing validation report. Invoke from the copy-connections coordinator.
+description: Use this skill as part of the Copy Connections workflow to execute a validated copy plan. Creates connection shells (without credentials), installs Quickstart packages, and produces a results file with next steps. Refuses to run without a passing validation report. Invoke from the copy-connections coordinator.
 ---
 
 # Copy Connections — Execute
 
 This skill performs the actual copy. It takes a validated plan and produces `.copy-connections/results.md`.
 
-**Execute does not handle credentials.** Connections are created using `run_setup_tests: false`, which lets them be created without valid credentials. The optional `copy-connections-credentials` skill handles credential attachment as a separate, post-execute step.
+**Execute does not handle credentials.** Connections are created using `run_setup_tests: false`, which lets them be created without valid credentials. The `copy-connections-credentials` skill handles credential attachment as a separate, post-execute step.
+
+**Execute does not apply schema config.** Schema config (which tables/columns are enabled, sync modes, hashing) requires a discovered schema, which only exists after credentials are attached and setup tests run. The `copy-connections-schema` skill handles this after credentials are in place.
 
 **Execute does not unpause connections.** Connections are created paused by default. Unpausing is the user's responsibility after they've verified everything is in order.
 
@@ -18,7 +20,9 @@ This skill performs the actual copy. It takes a validated plan and produces `.co
 3. **Confirm user is ready to execute.** Final yes/no before any writes.
 4. **Always use `run_setup_tests: false` on `create_connection`.** We don't have credentials at this point; running tests would fail noisily.
 5. **Continue on per-connection failures.** Don't abort the whole run if one connection fails. Log the failure and move to the next.
-6. **Produce `results.md` at the end regardless of outcome.** Partial successes, full successes, and full failures all produce a results file.## Step-by-step
+6. **Produce `results.md` at the end regardless of outcome.** Partial successes, full successes, and full failures all produce a results file.
+
+## Step-by-step
 
 ### 1. Pre-flight
 
@@ -51,14 +55,7 @@ Process connections sequentially. For each one:
 
 All other fields from the plan's connection config are passed through verbatim. The connection is created paused by default. This is the Fivetran-side default behavior; we rely on it.
 
-**c. Apply schema config.** For each table in the plan's schema config, call `modify_connection_table_config` with:
-- `enabled` (table-level)
-- `sync_mode` (SOFT_DELETE | HISTORY | LIVE)
-- `columns` dict with per-column `enabled` and `hashed`
-
-For tables/columns where the validation report flagged `*_NOT_PATCHABLE` (SYSTEM_TABLE, DELETED, etc.), skip the PATCH call rather than firing it and getting rejected. Log the skip.
-
-**d. Log the result.** Record per-connection: success, partial success (some schema patches failed), or failure. Continue to the next connection regardless.
+**c. Log the result.** Record per-connection: success or failure. Continue to the next connection regardless.
 
 ### 4. For each Quickstart transformation package in the plan
 
@@ -83,41 +80,36 @@ Write `.copy-connections/results.md` with:
 
 ## Summary
 
-- ✅ N connections created successfully
-- ⚠️ M connections created with schema issues (config applied with skips)
-- ❌ K connections failed to create
-- ✅ P Quickstart packages installed
-- ❌ Q Quickstart packages failed or skipped
+- N connections created successfully
+- K connections failed to create
+- P Quickstart packages installed
+- Q Quickstart packages failed or skipped
 
 ## Per-connection results
 
 ### salesforce_prod
-- ✅ Created (paused)
-- ✅ Schema config applied (47 tables)
-- ⚠️ 1 column config skipped: contacts.ssn (target schema config patch returned HASHED_COLUMN_UNPATCHABLE — the hashing intent didn't carry over; re-apply manually if needed)
-- Auth: OAuth — complete authentication in the Fivetran UI when ready
+- Created (paused)
+- Auth: OAuth — complete authentication in the Fivetran UI: <link>
 
 ### postgres_app
-- ✅ Created (paused)
-- ✅ Schema config applied (12 tables)
-- Auth: Password needed — see next steps
+- Created (paused)
+- Auth: Password needed — attach via credentials skill or Fivetran UI
 
 ### stripe_prod
-- ✅ Created (paused)
-- ✅ Schema config applied (23 tables, column hash on customers.email)
-- Auth: API key needed — see next steps
+- Created (paused)
+- Auth: API key needed — attach via credentials skill or Fivetran UI
 
 ## Transformations
 
-- ✅ stripe_analytics Quickstart package installed
+- stripe_analytics Quickstart package installed
 
 ## Next steps
 
-1. **Attach credentials and run setup tests.** Either:
-   - Run the `copy-connections-credentials` skill: I'll help you attach credentials and test each credential-based connection.
-   - Or do it yourself in the Fivetran UI for each connection.
+1. **Attach credentials.** Either:
+   - Run the `copy-connections-credentials` skill: I'll help you attach credentials for credential-based connections and provide UI links for OAuth ones.
+   - Or add credentials yourself in the Fivetran UI for each connection.
 
-2. **For OAuth connectors, complete authentication in the Fivetran UI** when you're ready. OAuth can't be completed from Claude Code.
+2. **Apply schema config.** After credentials are in place, run the `copy-connections-schema` skill to run setup tests and apply table/column selections, sync modes, and hashing from the plan.
 
 3. **Unpause connections** when you're ready for them to sync. You can do this one at a time in the Fivetran UI, or via the `sync_connection` MCP tool.
 
@@ -129,14 +121,14 @@ Write `.copy-connections/results.md` with:
 ## Cleanup
 
 - Keep `.copy-connections/copy_plan.yaml` and `validation_report.yaml` for audit, or delete if you're done.
-- If you used a credentials file during the post-execute credentials flow, delete it when you're done.
+- If you used a credentials file during the credentials flow, delete it when you're done.
 ```
 
 The results file is written even on failure — it's the source of truth for what happened.
 
 ### 6. Summarize to the user
 
-Give a short verbal summary: what was created, what failed, and point at results.md for the full breakdown. Mention the optional next step: "Want me to help attach credentials and run setup tests? Or you can do it yourself in the Fivetran UI."
+Give a short verbal summary: what was created, what failed, and point at results.md for the full breakdown. Mention the next step: "Want me to help attach credentials? Or you can do it yourself in the Fivetran UI. After credentials are in place, we'll apply schema config."
 
 ## Key product knowledge
 
@@ -148,15 +140,13 @@ Give a short verbal summary: what was created, what failed, and point at results
 
 **Idempotency is name-based, not config-based.** If a connection with the target name exists in the target group, we skip creation. We don't try to diff configs and patch to match — that's v1+ territory. Users resuming a partial execute get "skipped" for already-created ones and creation for the rest.
 
-**Schema config patches can fail per-table.** `enabled_patch_settings.allowed: false` (caught by validation) or server errors at PATCH time. Fail forward — log and continue; don't abort the connection because one table's config didn't apply.
+**Schema config happens later, not here.** The schema doesn't exist until credentials are attached and setup tests discover the tables/columns. Execute creates the connection shell with the right config; schema config is applied by the `copy-connections-schema` skill after credentials are in place.
 
 **Never try to update existing connections.** If a connection already exists with the target name, we skip. Full stop. Updating existing connections mid-execute is a foot-gun — the user might have intentionally set up something different and we'd clobber it.
 
 ## Error handling
 
 **Connection creation fails for one connection.** Log the error in results.md with the Fivetran error message. Continue to the next connection.
-
-**Schema config patch fails for one table within a connection.** Log in results.md, continue to the next table. The connection is still usable.
 
 **Destination is somehow missing when execute starts.** This should have been caught by validation's `PLAN_STALE` check. If it slips through anyway, stop and tell the user to re-scope.
 
@@ -166,7 +156,8 @@ Give a short verbal summary: what was created, what failed, and point at results
 
 ## Anti-patterns to avoid
 
-- **Don't run setup tests during execute.** We don't have credentials. Setup tests run during the optional credentials skill, after credentials are attached.
+- **Don't run setup tests during execute.** We don't have credentials. Setup tests happen in the schema skill, after credentials are attached.
+- **Don't apply schema config during execute.** The schema doesn't exist yet. That's the schema skill's job.
 - **Don't collect credentials during execute.** Credentials are out of scope for this skill.
 - **Don't unpause connections.** Not this skill's job.
 - **Don't abort on per-connection failures.** Continue; log; report.

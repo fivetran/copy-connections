@@ -17,7 +17,7 @@ These must happen in order. Skipping any of them will produce an incomplete or w
 2. **Understand the user's intent** (fresh flow only). Are they testing a few connections against a new destination, or migrating everything from one destination to another? The intent shapes the defaults and warnings throughout the rest of the flow.
 3. **Resolve source and target destinations before asking about connections.** "Which connections to copy" is meaningless without knowing which source group to look in and which target they're going to.
 4. **Create the target destination (if new) before connection-level scoping.** A plan that references a destination that doesn't yet work is worthless.
-5. **Fetch full config for every connection in scope** before writing the plan. The plan needs the actual `config` blocks and schema configs so execute can replicate fidelity.
+5. **Fetch full config for every connection in scope** before writing the plan. The plan needs the actual `config` blocks (for execute) and schema configs (for the schema skill to apply after credentials are in place).
 6. **Detect credential fields from the real config responses.** Do not hardcode which fields are credentials per connector — scan for masked values (`"********"`) in what Fivetran returns. This is informational (for the results file later); scope doesn't collect credentials.
 7. **Show a summary and get explicit confirmation** before writing `copy_plan.yaml`.
 
@@ -172,9 +172,10 @@ Transformations:
 
 All connection settings (sync frequency, data delay, schedule type, networking method, connector-specific config) are copied exactly as configured in the source.
 
-Note: Connections will be created without credentials and left paused. After the copy, you can either:
-  — Let me help attach credentials and run setup tests, or
-  — Fill in credentials yourself via the Fivetran UI.
+Note: Connections will be created without credentials and left paused. After the copy:
+  1. Attach credentials (I can help, or do it yourself in the Fivetran UI)
+  2. Run setup tests and apply schema config (table/column selections, sync modes, hashing)
+  3. Unpause when you're ready
 
 Write this plan?
 ```
@@ -273,5 +274,5 @@ Claude: Destination snowflake_test created and tests passed. Now — which of th
 
 [... conversation continues through connection selection and schema choices ...]
 
-Claude: Ready to write the plan. Connections will be created without credentials and left paused — after the copy, I can help attach credentials and run setup tests, or you can do it yourself in the UI. Either way. Sound good?
+Claude: Ready to write the plan. Connections will be created without credentials and left paused — after the copy, we'll attach credentials, then run setup tests and apply your schema config (table/column selections, hashing, etc.). Sound good?
 ```
