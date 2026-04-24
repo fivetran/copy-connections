@@ -1,8 +1,8 @@
 # Copy Connections
 
-Copy existing Fivetran connections to a new destination with full config fidelity. Connections are created paused and without credentials; you decide how to handle credentials afterward (let the plugin help, or finish in the Fivetran UI).
+Copy existing Fivetran connections to a new destination with full config fidelity.  Connections are created paused and without credentials; you decide how to handle credentials afterward (let the skills help, or finish in the Fivetran UI).
 
-This is a Claude Code plugin that packages five skills orchestrating a copy workflow against the Fivetran REST API. It depends on the [Fivetran MCP server](https://github.com/fivetran/fivetran-mcp).
+Five skills that orchestrate a copy workflow against the Fivetran REST API. Packaged as a Claude Code plugin; also runs in Codex. Depends on the [Fivetran MCP server](https://github.com/fivetran/fivetran-mcp).
 
 ## Status
 
@@ -19,40 +19,60 @@ Given an existing Fivetran account, Copy Connections helps you create a duplicat
 
 **What copies:** connection configs, schema configs (enabled tables/columns, sync mode), column config (hashing, blocking), connection-level settings (sync frequency, data delay, networking method), and Quickstart transformation packages.
 
-**What doesn't copy:** credentials (can be added post-copy via the plugin or manually in the UI), OAuth tokens (re-auth required in the UI — the plugin can't do browser OAuth), custom dbt projects (detected and flagged, require separate setup), historical data (new connections start fresh from the time you unpause them).
+**What doesn't copy:** credentials (can be added post-copy via the credentials skill or manually in the UI), OAuth tokens (re-auth required in the UI — the skills can't do browser OAuth), custom dbt projects (detected and flagged, require separate setup), historical data (new connections start fresh from the time you unpause them).
 
-**Connections are created paused.** The plugin never unpauses connections — you verify and unpause when you're ready.
+**Connections are created paused.** The skills never unpause connections — you verify and unpause when you're ready.
 
 ## The workflow
 
 Four phases. The first three are the copy itself; the fourth is an optional convenience for attaching credentials afterward.
 
-1. **Scope** — you describe what you want, the plugin fetches current state, and produces a structured copy plan. Intent-first: "testing a few connections" and "migrating everything" get different defaults.
+1. **Scope** — you describe what you want, the scope skill fetches current state, and produces a structured copy plan. Intent-first: "testing a few connections" and "migrating everything" get different defaults.
 2. **Validate** — checks the plan for issues (naming collisions, type compatibility, schema portability, source state). Produces a report; execute refuses to run if validation fails.
 3. **Execute** — creates the connection shells, applies schema and column config, installs Quickstart packages. Uses `run_setup_tests: false` so no credentials are needed. Produces a results file.
 4. **Credentials** *(optional, post-execute)* — helps attach credentials and run setup tests on the created connections. You can skip this entirely and handle credentials yourself in the Fivetran UI.
 
-Between phases, the plugin asks before continuing. State is persisted in `.copy-connections/` in your working directory, so you can close Claude Code mid-workflow and resume later.
+Between phases, the coordinator asks before continuing. State is persisted in `.copy-connections/` in your working directory, so you can close your session mid-workflow and resume later.
 
 ## Requirements
 
-- Claude Code installed
-- Fivetran MCP server configured in your working directory — see [setup instructions](https://github.com/fivetran/fivetran-mcp)
+* Claude Code or Codex CLI installed
+* Fivetran MCP server configured in your working directory — see [setup instructions](https://github.com/fivetran/fivetran-mcp)
 - These MCP tools enabled (uncomment in `server.py` if needed):
   - **Reads:** `list_connections`, `get_connection_details`, `get_connection_schema_config`, `list_destinations`, `get_destination_details`, `list_groups`, `list_transformations`, `get_transformation_details`, `list_transformation_projects`, Quickstart package metadata endpoints
   - **Writes:** `create_group`, `create_destination`, `run_destination_setup_tests`, `create_connection`, `modify_connection_table_config`, `run_connection_setup_tests`, `create_transformation`, and the credential-patch endpoint (for the optional post-execute credentials flow)
 
 ## Installation
 
-For local testing, inside the directory [fivetran-mcp](https://github.com/fivetran/fivetran-mcp) is configured in, run:
+From the directory where [fivetran-mcp](https://github.com/fivetran/fivetran-mcp) is configured:
+
+**Claude Code:**
 
 ```
 claude --plugin-dir /path/to/copy-connections
 ```
 
+**Codex:**
+
+Copy the skills into Codex's skills directory, then restart Codex:
+
+```
+cp -r /path/to/copy-connections/skills/* ~/.codex/skills/
+```
+
+Alternatively, symlink them if you want updates to flow through automatically:
+
+```
+for skill in /path/to/copy-connections/skills/*/; do
+  ln -s "$skill" ~/.codex/skills/
+done
+```
+
+Restart Codex after installing so it picks up the new skills.
+
 ## Usage
 
-Start a Claude Code session in a working directory that has your Fivetran MCP configured. Then say something like:
+Start a session (Claude Code or Codex) in a working directory that has your Fivetran MCP configured. Then say something like:
 
 > "I want to copy my Fivetran connections from Redshift to a new Snowflake destination."
 
@@ -72,7 +92,7 @@ This invokes `copy-connections-validate` without the coordinator ceremony. Usefu
 
 ## Workflow files
 
-Everything the plugin writes lives in `.copy-connections/`:
+Everything the skills write lives in `.copy-connections/`:
 
 - `copy_plan.yaml` — the structured plan produced by scoping
 - `validation_report.yaml` — issues found during validation (with a checksum of the plan, so execute can detect if the plan changed after validation)
@@ -80,7 +100,7 @@ Everything the plugin writes lives in `.copy-connections/`:
 - `credentials.yaml.template` — generated by the credentials skill if you choose the file-based path
 - `credentials.yaml` — your filled-in template (do not commit)
 
-The plugin adds `credentials.yaml` to `.gitignore` if it detects a git repository. Check before pushing anyway.
+The credentials skill adds `credentials.yaml` to `.gitignore` if it detects a git repository. Check before pushing anyway.
 
 ## Skills
 
@@ -97,5 +117,5 @@ The plugin adds `credentials.yaml` to `.gitignore` if it detects a git repositor
 - **Historical backfill** — copies start fresh from their unpause point.
 - **Custom dbt projects** — detected and flagged during scoping, require separate setup on the new destination.
 - **Row-count verification** — no post-copy data comparison.
-- **OAuth completion** — can't be done from Claude Code. You complete OAuth in the Fivetran UI for any OAuth connectors.
-- **Rollback** — if execute fails partway through, the partial copy stays. Clean up via the Fivetran UI (delete the target group).
+* **OAuth completion** — can't be done from the CLI. You complete OAuth in the Fivetran UI for any OAuth connectors.
+* **Rollback** — if execute fails partway through, the partial copy stays. Clean up via the Fivetran UI (delete the target group).
