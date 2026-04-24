@@ -1,0 +1,14 @@
+{
+  "name": "copy-connections",
+  "version": "0.1.1",
+  "description": "Copy existing Fivetran connections to a new destination with full config fidelity. Connections are created paused and without credentials.",
+  "author": {
+    "name": "Fivetran",
+    "url": "https://github.com/fivetran"
+  },
+  "homepage": "https://github.com/fivetran/copy-connections",
+  "repository": "https://github.com/fivetran/copy-connections",
+  "license": "MIT",
+  "keywords": ["fivetran", "mcp", "migration", "connections"],
+  "skills": "./skills/"
+}
