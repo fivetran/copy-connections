@@ -7,6 +7,16 @@ description: Use this skill AFTER copy-connections-execute has successfully crea
 
 This skill runs **after** execute has created the connection shells. It helps the user get credentials attached to their connections so the schema skill can run next.
 
+## Fivetran UI link format
+
+The direct link to a connection's setup page is:
+
+```
+https://fivetran.com/dashboard/connections/<connection_id>
+```
+
+Where `<connection_id>` is the target connection ID returned by `create_connection` during execute (recorded in `.copy-connections/results.md`).
+
 ## Core approach
 
 Be flexible and user-friendly. Different users will want to handle credentials differently — some will hand you a file with everything, some will want to go connection-by-connection, some will just want links to the Fivetran UI. Adapt to the user rather than forcing a specific flow.

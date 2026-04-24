@@ -89,15 +89,15 @@ Write `.copy-connections/results.md` with:
 
 ### salesforce_prod
 - Created (paused)
-- Auth: OAuth — complete authentication in the Fivetran UI: <link>
+- Auth: OAuth — complete authentication in the Fivetran UI: https://fivetran.com/dashboard/connections/<connection_id>
 
 ### postgres_app
 - Created (paused)
-- Auth: Password needed — attach via credentials skill or Fivetran UI
+- Auth: Password needed — attach via credentials skill or Fivetran UI: https://fivetran.com/dashboard/connections/<connection_id>
 
 ### stripe_prod
 - Created (paused)
-- Auth: API key needed — attach via credentials skill or Fivetran UI
+- Auth: API key needed — attach via credentials skill or Fivetran UI: https://fivetran.com/dashboard/connections/<connection_id>
 
 ## Transformations
 

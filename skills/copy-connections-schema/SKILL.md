@@ -89,7 +89,7 @@ Example additions to the per-connection section in results.md:
 
 ### salesforce_prod
 - Created (paused)
-- Credentials: OAuth — completed in Fivetran UI
+- Credentials: OAuth — completed in Fivetran UI: https://fivetran.com/dashboard/connections/<connection_id>
 - Setup tests: passed
 - Schema config: applied (47 tables, 312 columns)
   - contacts.ssn hashing applied
