@@ -47,7 +47,7 @@ Use this information to tell the user what each connection needs and what their 
 
 5. **Don't be rigid about the collection method.** If they start giving you credentials inline, don't stop them to ask about a mode. If they say "here's a file," read it. If they say "just give me the links," give links. Match their energy.
 
-6. **Patch credentials via `modify_connection`** with the credential field values. Process and report results.
+6. **Patch credentials via `modify_connection`** with the credential field values. **Always use `run_setup_tests: false`** — setup tests are the schema skill's job, and only `run_connection_setup_tests` (not `modify_connection` with `run_setup_tests: true`) triggers schema discovery. Process and report results.
 
 7. **After patching, report what succeeded and what failed.** If something fails, let them know they can fix it in the UI or retry.
 
@@ -101,5 +101,5 @@ Users may run this multiple times. On re-run, check results.md to see what still
 - **Don't echo credential values.**
 - **Don't persist credential values to any artifact.**
 - **Don't attempt OAuth from this skill.**
-- **Don't run setup tests.** That's the schema skill's job.
+- **Don't run setup tests.** That's the schema skill's job. Never pass `run_setup_tests: true` on `modify_connection`.
 - **Don't apply schema config.** That's the schema skill's job.

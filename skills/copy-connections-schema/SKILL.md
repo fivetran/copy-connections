@@ -49,9 +49,9 @@ Ask the user which connections they'd like to run schema config for, or offer to
 
 ### 3. For each connection
 
-**a. Run setup tests.**
+**a. Run setup tests — ALWAYS, no exceptions.**
 
-Call `run_connection_setup_tests` for the connection.
+Call `run_connection_setup_tests` for the connection. **This call is mandatory even if setup tests previously passed** (e.g., during credential patching). `run_connection_setup_tests` is the only API call that triggers schema discovery — without it, `get_connection_schema_config` will return 404. `modify_connection` with `run_setup_tests: true` runs tests but does NOT discover the schema.
 
 - If tests **pass**: the connection has valid credentials and the schema has been discovered. Proceed to apply schema config.
 - If tests **fail**: report the error. The connection either doesn't have credentials yet or has bad credentials. Skip schema config for this connection — there's nothing to configure. Suggest the user check credentials and re-run this skill later.
@@ -107,7 +107,7 @@ Short verbal summary: how many connections had schema config applied, how many w
 
 ## Key product knowledge
 
-**Schema discovery happens during setup tests.** When you run `run_connection_setup_tests`, Fivetran connects to the source, discovers available tables and columns, and populates the schema. Without this step, there's no schema to configure.
+**Schema discovery ONLY happens via `run_connection_setup_tests`.** This is the only API call that triggers Fivetran to connect to the source, discover tables and columns, and populate the schema. Without it, `get_connection_schema_config` returns 404. Note: `modify_connection` with `run_setup_tests: true` runs connection tests but does NOT trigger schema discovery — you must always call `run_connection_setup_tests` explicitly.
 
 **Schema config patching is idempotent.** Running `modify_connection_table_config` with the same settings twice produces the same result. Safe to re-run this skill.
 
@@ -129,7 +129,7 @@ Short verbal summary: how many connections had schema config applied, how many w
 
 ## Anti-patterns to avoid
 
-- **Don't apply schema config without running setup tests first.** The schema doesn't exist until tests pass.
+- **Don't apply schema config without calling `run_connection_setup_tests` first.** The schema doesn't exist until this specific endpoint is called — even if tests passed elsewhere.
 - **Don't attach credentials in this skill.** That's the credentials skill's job.
 - **Don't unpause connections.** Not this skill's job.
 - **Don't abort on per-connection failures.** Continue; log; report.
